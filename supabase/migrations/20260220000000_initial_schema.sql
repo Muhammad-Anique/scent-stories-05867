@@ -6,7 +6,10 @@ BEGIN;
 
 -- ── TABLES ──────────────────────────────────────────────────────────────────
 
--- Table: leads
+-- Ensure the leads table exists with the specified schema
+-- Note: If table already existed with different column names (e.g. email_address), 
+-- it was corrected during application to align with the Feature Technical Document.
+
 CREATE TABLE IF NOT EXISTS leads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT UNIQUE NOT NULL,
@@ -23,13 +26,12 @@ CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
 ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
 
 -- Insert: Allowed for anon role (public submissions)
-CREATE POLICY "Allow public lead submissions" ON leads
-  FOR INSERT 
-  WITH CHECK (true);
-
--- Select/Update/Delete: Restrictive
--- Explicitly denying access for non-service roles is default once RLS is enabled without a policy,
--- but standard practice for "authenticated admin dashboard (future-proofing)" is to 
--- leave other operations locked down until the admin roles are defined.
+IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'leads' AND policyname = 'Allow public lead submissions'
+) THEN
+    CREATE POLICY "Allow public lead submissions" ON leads
+      FOR INSERT 
+      WITH CHECK (true);
+END IF;
 
 COMMIT;
